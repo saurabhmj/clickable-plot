@@ -2,22 +2,24 @@ import sys
 import string
 import numpy as np
 import matplotlib.pyplot as plt
-
+import argparse
 from keras.optimizers import SGD
-
-#sys.path.insert(0,'/home/jogal002/python_workspace/clickable_images/machine_augmented_classification/experiments/dissolving')
-from dissolving_utils import get_cluster_centres
-
-#from paper_snhunters_plots import ReDEC
 from sklearn.decomposition import PCA
 
 sys.path.insert(0,'./model')
-#from datasets import load_galaxy
 from DEC import DEC, ClusteringLayer
 
-lcolours = ['#CAA8F5', '#D6FF79', '#A09BE7', '#5F00BA', '#56CBF9', \
-            '#F3C969', '#ED254E', '#B0FF92', '#D9F0FF',] #'#46351D']
-galaxy_results = "./model/results"
+
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument("--classes", help="number of classes in the model", default=9)
+parser.add_argument("--img_ht", help="image height", default=100)
+parser.add_argument("--img_wdt", help="image width", default=100)
+parser.add_argument("--data_path", help="directory where data is located", default="./data")
+parser.add_argument("--result_path", help="directory where model results are located", default="./model/results")
+
+args = parser.parse_args()
+#print("CLASSES: "+str(args.classes))
+
 # DEC constants from DEC paper
 batch_size = 256
 lr         = 0.01
@@ -27,10 +29,21 @@ maxiter    = 10
 #update_interval = 140 #perhaps this should be 1 for multitask learning
 update_interval = 1 #perhaps this should be 1 for multitask learning
 n_clusters = 9 # number of clusters to use
-n_classes  = 9  # number of classes
+n_classes  = args.classes  # number of classes
+img_ht = args.img_ht
+img_wdt = args.img_wdt
+data_path = args.data_path
+galaxy_results = args.result_path
+
+lcolours = ['#CAA8F5', '#D6FF79', '#A09BE7', '#5F00BA', '#56CBF9', \
+            '#F3C969', '#ED254E', '#B0FF92', '#D9F0FF','#46351D']
+lcolours = lcolours[0:n_classes]
+
+def get_cluster_centres(dec):
+  return np.squeeze(np.array(dec.model.get_layer(name='clustering').get_weights()))
 
 
-def load_galaxy(data_path="./data"):
+def load_galaxy(data_path=data_path):
     #label_data = np.load(data_path + "/rescaled_labels.npy")
     img_data = np.load(data_path + "/rescaled_matrix_100.npz")['arr_0']
     label_data = img_data[:,-1]
@@ -57,7 +70,7 @@ def pca_plot(base_network, x, cluster_centres=None, y=None, labels=[], output_fi
     fig = plt.figure()
     for i in range(len(event.ind)):
       ax = fig.add_subplot(dim,dim,i+1)
-      ax.imshow(np.reshape(x[event.ind[i]], (100,100)), cmap='gray_r')
+      ax.imshow(np.reshape(x[event.ind[i]], (img_ht,img_wdt)), cmap='gray_r')
       plt.axis('off')
     plt.show()
   
@@ -114,11 +127,11 @@ def clickable_analysis(x_test, y_test):
 def main():
   x, y = load_galaxy()
   # split the data into training, validation and test sets
-  m = x.shape[0]
-  m = m - 20000
-  sample_frac = 0.01 # sampling 1% of the points
-  split = int(sample_frac*m)
-  print(split)
+  #m = x.shape[0]
+  #m = m - 20000
+  #sample_frac = 0.01 # sampling 1% of the points
+  #split = int(sample_frac*m)
+  #print(split)
 
   # the training set acts as the sample of data for which we query volunteer classifications.
   # Here the data is sampled uniformly at random from the entire data set, targeting the most densely populated regions
@@ -131,8 +144,8 @@ def main():
   #x_valid = x[50000:60000]
   #y_valid = y[50000:60000]
 
-  x_test  = x[30000:]
-  y_test  = y[30000:]
+  x_test  = x[60000:]
+  y_test  = y[60000:]
   print(x_test.shape)
 
   clickable_analysis(x_test, y_test)
